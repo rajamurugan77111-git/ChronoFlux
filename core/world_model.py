@@ -177,12 +177,28 @@ class LSTMWorldModel:
             "feature_gates": feat_gate.astype(float),
         }
 
-    def rollout(self, seq: np.ndarray, steps: int = 3) -> list[dict]:
-        """K-step forward simulation of network state transitions."""
+    def rollout(self, seq: np.ndarray, steps: int = 3, hybrid: tuple | None = None,
+                current_stage: str | None = None) -> list[dict]:
+        """K-step forward simulation of network state transitions.
+
+        If `hybrid` = (KillChainPrior, gate) is given, each step's stage distribution
+        is the confidence-gated blend of the LSTM and the kill-chain prior (v8)."""
         current = seq.copy()
         out = []
+        cur_stage = current_stage or "Normal"
         for step in range(1, steps + 1):
             pred = self.predict_next(current)
+            if hybrid is not None:
+                from core.killchain import gated_blend
+                prior, gate = hybrid
+                names = list(STAGE_ORDER)
+                p_model = np.array([pred["stage_probs"].get(n, 0.0) for n in names]) + 1e-6
+                p_model = p_model / p_model.sum()
+                p = gated_blend(p_model, prior.proba(cur_stage, names), *gate)
+                idx = int(np.argmax(p))
+                pred = {**pred, "stage": names[idx], "confidence": float(p[idx]),
+                        "stage_probs": {n: float(v) for n, v in zip(names, p)}}
+                cur_stage = names[idx]
             # Feed predicted state back with stage_code aligned to predicted stage.
             nxt = pred["next_state"].copy()
             nxt[-2] = STAGE_CODE[pred["stage"]] / max(1, len(STAGE_ORDER) - 1)
@@ -364,11 +380,13 @@ def build_transition_dataset(records: list[dict]) -> dict:
                 target = state_vector(nxt)
             except Exception:
                 continue
+            current = (seq_rows[-1].get("prediction") or {}).get("current_stage") or "Normal"
             samples.append(
                 {
                     "seq": seq,
                     "next_state": target,
                     "stage": str(stage),
+                    "current_stage": str(current),
                     "session_id": session["id"],
                     "flat": seq.reshape(-1),
                 }
@@ -662,7 +680,12 @@ def predict_world_model(records: list[dict], window_seconds: float = 10.0) -> di
 
     recent = records[-SEQ_LEN:]
     seq = np.stack([state_vector(r) for r in recent], axis=0)
-    rollout = model.rollout(seq, steps=3)
+    from core.killchain import load_prior
+    hybrid = load_prior()
+    current_stage = (recent[-1].get("prediction") or {}).get("current_stage")
+    rollout = model.rollout(seq, steps=3, hybrid=hybrid, current_stage=current_stage)
+    model_name = ("LSTM World Model + Kill-Chain Prior (hybrid v8)" if hybrid
+                  else "LSTM World Model")
     if not rollout:
         return None
 
@@ -692,7 +715,8 @@ def predict_world_model(records: list[dict], window_seconds: float = 10.0) -> di
         return {
             "status": "insufficient_evidence",
             "mode": "lstm_world_model",
-            "model_name": "LSTM World Model",
+            "model_name": model_name,
+            "forecaster": "hybrid_killchain_v8" if hybrid else "lstm",
             "next_stage": None,
             "candidate_stage": first["stage"],
             "confidence": first["confidence"],
@@ -713,7 +737,8 @@ def predict_world_model(records: list[dict], window_seconds: float = 10.0) -> di
     return {
         "status": "active",
         "mode": "lstm_world_model",
-        "model_name": "LSTM World Model",
+        "model_name": model_name,
+        "forecaster": "hybrid_killchain_v8" if hybrid else "lstm",
         "next_stage": first["stage"],
         "confidence": first["confidence"],
         "infiltration_probability": round(max(infiltration, first["confidence"] if first["stage"] in ATTACK_STAGES else infiltration), 4),
@@ -735,8 +760,10 @@ def predict_world_model(records: list[dict], window_seconds: float = 10.0) -> di
         "driving_features": driving,
         "mitre_tactics": mitre_for_stage(first["stage"]),
         "evidence": (
-            "K-step LSTM world-model rollout of network-state transition dynamics P(S_t+1|history). "
-            f"Infiltration probability over next {len(rollout)} windows: {infiltration:.1%}. "
+            ("K-step LSTM world-model rollout of network-state transition dynamics P(S_t+1|history), "
+             "confidence-gated with a learned kill-chain transition prior. " if hybrid else
+             "K-step LSTM world-model rollout of network-state transition dynamics P(S_t+1|history). ")
+            + f"Infiltration probability over next {len(rollout)} windows: {infiltration:.1%}. "
             f"Top drivers: {', '.join(d['label'] for d in driving[:3])}."
         ),
         "window_count": SEQ_LEN,

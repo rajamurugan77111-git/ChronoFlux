@@ -28,6 +28,17 @@ def main():
     print(f"Training world model on {len(combined)} windows ({len(lab)} lab + {len(live)} live)")
     result = train_world_model(combined, force=True, epochs=30)
     print(json.dumps({k: result.get(k) for k in ("trained", "ready", "samples", "sessions", "comparison_vs_logistic_regression", "model_name")}, indent=2))
+    # v8: kill-chain prior + confidence gate for the hybrid forecaster
+    from core.killchain import KillChainPrior, save_prior
+    from training.evaluate_forecasting import choose_gate, load_samples
+    samples, _ = load_samples()
+    classes = sorted({s["stage"] for s in samples})
+    prior = KillChainPrior().fit((s["current_stage"], s["stage"]) for s in samples)
+    gate = choose_gate(samples, classes)
+    save_prior(prior, gate, {"trained_on_samples": len(samples),
+                             "evaluation": "python -m training.evaluate_forecasting"})
+    print(f"Hybrid forecaster: gate (alpha_confident, alpha_uncertain, tau) = {gate}")
+
     metrics = result.get("metrics") or {}
     if metrics.get("test"):
         print("World-model test:", json.dumps(metrics["test"], indent=2))

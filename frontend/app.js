@@ -537,6 +537,10 @@ async function loadArena() {
           <span class="badge ${delta > 0 ? 'low' : 'medium'}">${delta >= 0 ? '+' : ''}${(delta * 100).toFixed(2)} pts vs v7 model</span></span>
         <table class="arena-table"><thead><tr><th>Model</th><th>${metric.replace('_', '-')}</th><th>Accuracy</th><th>Size</th></tr></thead><tbody>${rows}</tbody></table>
         <div class="muted tiny">Top drivers (permutation importance)</div>${feats}
+        ${t.label_ambiguity ? `<div class="subtle-note" style="margin-top:10px;font-size:12px">
+          <b>Data ceiling:</b> ${Math.round((t.label_ambiguity.share_of_rows_with_conflicting_duplicates.Analysis || 0) * 100)}% of Analysis and
+          ${Math.round((t.label_ambiguity.share_of_rows_with_conflicting_duplicates.Backdoor || 0) * 100)}% of Backdoor flows have feature vectors identical to
+          other classes. Even a perfect memoriser reaches only ${(t.label_ambiguity.oracle_macro_f1_upper_bound * 100).toFixed(1)}% macro-F1.</div>` : ''}
       </div>`;
     }).join('');
   } catch (err) {
@@ -544,8 +548,40 @@ async function loadArena() {
   }
 }
 
+const FORECAST_SHORT = {
+  lstm_world_model_v7: 'LSTM world model (v7)',
+  logistic_regression: 'Logistic regression',
+  kill_chain_prior: 'Kill-chain prior',
+  hybrid_v8: 'Hybrid v8 (deployed)',
+};
+
+async function loadForecastBench() {
+  const box = $('forecastBench');
+  if (!box) return;
+  try {
+    const b = await request('/api/forecast/benchmark');
+    if (!b.available) { box.innerHTML = `<div class="muted tiny">${escapeArena(b.hint || b.error || 'Not generated')}</div>`; return; }
+    const titles = { A_unseen_sessions: 'Unseen sessions', B_unseen_progressions: 'Unseen attack progressions' };
+    box.innerHTML = Object.entries(b.protocols).map(([key, p]) => {
+      const res = p.results;
+      const best = Object.keys(res).reduce((a, k) => (res[k].top2_accuracy > res[a].top2_accuracy ? k : a));
+      const rows = Object.entries(res).map(([k, m]) => `<tr class="${k === 'hybrid_v8' ? 'winner' : ''}">
+          <td>${escapeArena(FORECAST_SHORT[k] || k)}${k === best ? ' ★' : ''}</td>
+          <td>${(m.accuracy * 100).toFixed(1)}%</td><td>${(m.macro_f1 * 100).toFixed(1)}%</td>
+          <td>${(m.top2_accuracy * 100).toFixed(1)}%</td></tr>`).join('');
+      return `<div class="arena-task"><h4>${titles[key] || key}</h4>
+        <span class="muted tiny">${escapeArena(p.description)} · ${p.folds} folds · ★ best top-2</span>
+        <table class="arena-table"><thead><tr><th>Forecaster</th><th>Accuracy</th><th>Macro-F1</th><th>Top-2</th></tr></thead>
+        <tbody>${rows}</tbody></table></div>`;
+    }).join('');
+  } catch (err) {
+    box.innerHTML = `<div class="muted tiny">Benchmark unavailable: ${escapeArena(err.message)}</div>`;
+  }
+}
+
 const ARENA_SHORT = {
   hist_gradient_boost: 'Gradient Boosting (HGB)',
+  hist_gradient_boost_cv: 'Gradient Boosting (CV-tuned)',
   random_forest: 'Random Forest (v7 reference)',
   logistic_regression: 'Logistic Regression',
 };
@@ -586,6 +622,7 @@ async function loadSystem() {
     }).join('');
     renderForecastPage();
     loadArena();
+    loadForecastBench();
   } catch (err) {
     toast(`System status error: ${err.message}`);
   }

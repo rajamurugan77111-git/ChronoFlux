@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/assets/styles.css?v=8.0.0" />
+  <link rel="stylesheet" href="/assets/styles.css?v=8.1.0" />
 </head>
 <body>
   <div class="app-shell">
@@ -401,6 +401,14 @@
           </div>
           <div id="arenaBody" class="arena-grid"><div class="muted tiny">Loading leaderboard…</div></div>
         </article>
+        <article class="panel arena-panel">
+          <div class="panel-head"><div class="panel-title">Forecasting benchmark — P(stage<sub>t+1</sub> | T1–T4)</div></div>
+          <div class="subtle-note" style="margin-bottom:12px">
+            Split by whole recording session (no window leakage). <b>Unseen sessions</b>: known attack progressions, new sessions.
+            <b>Unseen progressions</b>: leave-one-campaign-out. Re-run with <code>python -m training.evaluate_forecasting</code>.
+          </div>
+          <div id="forecastBench" class="arena-grid"><div class="muted tiny">Loading benchmark…</div></div>
+        </article>
         <article class="panel">
           <div class="panel-head"><div class="panel-title">How to feed traffic (current build)</div></div>
           <div class="subtle-note">
@@ -569,6 +577,6 @@
   </div>
 
   <div class="toast" id="toast"></div>
-  <script src="/assets/app.js?v=8.0.0"></script>
+  <script src="/assets/app.js?v=8.1.0"></script>
 </body>
 </html>

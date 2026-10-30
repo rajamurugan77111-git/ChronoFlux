@@ -1,0 +1,142 @@
+{
+  "generated_at": "2026-10-30T07:38:52.432641+00:00",
+  "data": "data/world_model_sessions.jsonl",
+  "classes": [
+    "Command & Control",
+    "Execution",
+    "Exfiltration",
+    "Impact",
+    "Initial Access",
+    "Lateral Movement",
+    "Normal",
+    "Persistence",
+    "Reconnaissance",
+    "Suspicious"
+  ],
+  "protocols": {
+    "A_unseen_sessions": {
+      "description": "Known attack progressions, unseen sessions (grouped by session)",
+      "folds": 4,
+      "results": {
+        "lstm_world_model_v7": {
+          "accuracy": 0.7073,
+          "macro_f1": 0.6372,
+          "top2_accuracy": 0.8963,
+          "samples": 164
+        },
+        "logistic_regression": {
+          "accuracy": 0.5488,
+          "macro_f1": 0.4897,
+          "top2_accuracy": 0.8293,
+          "samples": 164
+        },
+        "kill_chain_prior": {
+          "accuracy": 0.5854,
+          "macro_f1": 0.4526,
+          "top2_accuracy": 0.8537,
+          "samples": 164
+        },
+        "hybrid_v8": {
+          "accuracy": 0.689,
+          "macro_f1": 0.605,
+          "top2_accuracy": 0.8659,
+          "samples": 164
+        }
+      },
+      "gate_per_fold (alpha_confident, alpha_uncertain, tau)": [
+        [
+          0.8,
+          0.2,
+          0.4
+        ],
+        [
+          0.65,
+          0.2,
+          0.5
+        ],
+        [
+          0.9,
+          0.2,
+          0.4
+        ],
+        [
+          0.65,
+          0.5,
+          0.4
+        ]
+      ]
+    },
+    "B_unseen_progressions": {
+      "description": "Leave-one-attack-progression-out (new campaigns)",
+      "folds": 8,
+      "results": {
+        "lstm_world_model_v7": {
+          "accuracy": 0.3354,
+          "macro_f1": 0.2393,
+          "top2_accuracy": 0.4878,
+          "samples": 164
+        },
+        "logistic_regression": {
+          "accuracy": 0.2256,
+          "macro_f1": 0.1737,
+          "top2_accuracy": 0.3963,
+          "samples": 164
+        },
+        "kill_chain_prior": {
+          "accuracy": 0.4146,
+          "macro_f1": 0.3129,
+          "top2_accuracy": 0.6341,
+          "samples": 164
+        },
+        "hybrid_v8": {
+          "accuracy": 0.378,
+          "macro_f1": 0.2838,
+          "top2_accuracy": 0.6098,
+          "samples": 164
+        }
+      },
+      "gate_per_fold (alpha_confident, alpha_uncertain, tau)": [
+        [
+          0.65,
+          0.0,
+          0.5
+        ],
+        [
+          0.65,
+          0.0,
+          0.6
+        ],
+        [
+          0.65,
+          0.5,
+          0.4
+        ],
+        [
+          0.65,
+          0.2,
+          0.7
+        ],
+        [
+          0.65,
+          0.0,
+          0.5
+        ],
+        [
+          0.65,
+          0.0,
+          0.5
+        ],
+        [
+          0.8,
+          0.35,
+          0.4
+        ],
+        [
+          0.65,
+          0.35,
+          0.4
+        ]
+      ]
+    }
+  }
+}

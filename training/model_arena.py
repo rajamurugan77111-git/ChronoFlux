@@ -93,6 +93,12 @@ def candidates(task: str) -> dict:
             ]),
             "balanced_weights": True,
         },
+        "hist_gradient_boost_cv": {
+            "label": "Histogram Gradient Boosting, hyper-parameters tuned by 3-fold CV on train",
+            "pipeline": None,          # built by tune_hgb() on the training split only
+            "balanced_weights": True,
+            "tune": True,
+        },
         "logistic_regression": {
             "label": "Logistic Regression (linear baseline)",
             "pipeline": Pipeline([
@@ -102,6 +108,46 @@ def candidates(task: str) -> dict:
             "balanced_weights": False,
         },
     }
+
+
+HGB_GRID = [
+    {"max_iter": 400, "learning_rate": 0.08, "max_leaf_nodes": 48, "min_samples_leaf": 20},
+    {"max_iter": 600, "learning_rate": 0.05, "max_leaf_nodes": 64, "min_samples_leaf": 10},
+    {"max_iter": 800, "learning_rate": 0.04, "max_leaf_nodes": 96, "min_samples_leaf": 10},
+    {"max_iter": 600, "learning_rate": 0.05, "max_leaf_nodes": 64, "min_samples_leaf": 30},
+]
+
+
+def _hgb(params):
+    n_num, n_cat = len(NUMERIC_FEATURES), len(CATEGORICAL_FEATURES)
+    return Pipeline([
+        ("preprocess", _tree_preprocessor()),
+        ("classifier", HistGradientBoostingClassifier(
+            l2_regularization=1.0, categorical_features=list(range(n_num, n_num + n_cat)),
+            early_stopping=True, validation_fraction=0.1, random_state=SEED, **params)),
+    ])
+
+
+def tune_hgb(task, X_train, y_train):
+    """Pick HGB hyper-parameters by stratified 3-fold CV on the TRAINING split only,
+    so the holdout stays untouched (no selection bias)."""
+    from sklearn.model_selection import StratifiedKFold
+    scoring = "f1" if task == "detection" else "macro"
+    best, best_score = None, -1
+    cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=SEED)
+    for params in HGB_GRID:
+        scores = []
+        for tr, va in cv.split(X_train, y_train):
+            m = _hgb(params)
+            yt = y_train.iloc[tr]
+            m.fit(X_train.iloc[tr], yt,
+                  classifier__sample_weight=np.sqrt(compute_sample_weight("balanced", yt)))
+            pred = m.predict(X_train.iloc[va])
+            scores.append(f1_score(y_train.iloc[va], pred, zero_division=0) if scoring == "f1"
+                          else f1_score(y_train.iloc[va], pred, average="macro", zero_division=0))
+        if np.mean(scores) > best_score:
+            best, best_score = params, float(np.mean(scores))
+    return best, round(best_score, 4)
 
 
 # --------------------------------------------------------------------------- evaluation
@@ -142,6 +188,29 @@ def feature_importance(model, X_val, y_val, task: str, n_rows: int = 2500) -> li
     return [{"feature": f, "importance": round(float(v), 4)} for f, v in ranked[:12]]
 
 
+def label_ambiguity(df) -> dict:
+    """How separable are the classes at all? For each class, the share of rows whose
+    exact feature vector also occurs with a DIFFERENT label, plus the macro-F1 of an
+    oracle that memorises every vector (scored on its own training data). This is an
+    upper bound that no flow-feature model can beat."""
+    key = df[FEATURE_COLUMNS].astype(str).agg("|".join, axis=1)
+    y = df[ATTACK_CATEGORY_COLUMN]
+    n_labels = y.groupby(key).nunique()
+    ambiguous = key.map(n_labels) > 1
+    majority = y.groupby(key).agg(lambda s: s.value_counts().index[0])
+    oracle = key.map(majority)
+    classes = sorted(y.unique())
+    return {
+        "share_of_rows_with_conflicting_duplicates": {
+            str(c): round(float(ambiguous[y == c].mean()), 3) for c in classes},
+        "oracle_macro_f1_upper_bound": round(float(f1_score(y, oracle, average="macro")), 4),
+        "oracle_per_class_f1": {str(c): round(float(v), 3) for c, v in
+                                zip(classes, f1_score(y, oracle, labels=classes, average=None))},
+        "note": "Identical flow-feature vectors labelled with different attack categories "
+                "(notably Analysis, Backdoor, DoS) cap achievable per-class accuracy.",
+    }
+
+
 def run_task(task: str, df, deploy: bool) -> dict:
     if task == "detection":
         X, y = df[FEATURE_COLUMNS], df[TARGET_COLUMN]
@@ -157,6 +226,11 @@ def run_task(task: str, df, deploy: bool) -> dict:
     for key, spec in candidates(task).items():
         t0 = time.time()
         fit_kwargs = {}
+        tuned = None
+        if spec.get("tune"):
+            params, cv_score = tune_hgb(task, X_train, y_train)
+            spec["pipeline"] = _hgb(params)
+            tuned = {"params": params, "cv_score": cv_score}
         if spec["balanced_weights"]:
             # sqrt of balanced weights: helps rare classes without wrecking precision
             fit_kwargs["classifier__sample_weight"] = np.sqrt(
@@ -166,6 +240,8 @@ def run_task(task: str, df, deploy: bool) -> dict:
         metrics = evaluate(task, y_val, model.predict(X_val))
         entry = {"key": key, "model": spec["label"], **metrics,
                  "train_seconds": round(time.time() - t0, 1), "size_mb": _size_mb(model)}
+        if tuned:
+            entry["tuning"] = tuned
         board.append(entry)
         fitted[key] = model
         print(f"  [{task}] {key:<22} {primary}={metrics[primary]:.4f} "
@@ -189,6 +265,8 @@ def run_task(task: str, df, deploy: bool) -> dict:
         "validation_rows": int(len(X_val)),
         "deployed": deploy,
     }
+    if task == "stage":
+        result["label_ambiguity"] = label_ambiguity(df)
 
     if deploy:
         name = "detection" if task == "detection" else "stage"

@@ -111,7 +111,7 @@ def health():
     world = world_status(read_history(limit=2500))
     return {
         "status": "ChronoFlux backend running",
-        "version": "8.0.0",
+        "version": "8.1.0",
         "mode": "live-ready",
         "models": {
             **current_models,
@@ -144,6 +144,8 @@ def health():
             "deep_L3_L4_flow_telemetry",
             "tamper_evident_private_evidence_chain",
             "automl_model_arena_selection",
+            "killchain_prior_hybrid_forecasting",
+            "session_grouped_forecast_benchmark",
             "permutation_feature_importance",
         ],
     }
@@ -183,6 +185,18 @@ def system_status():
         "evidence_chain": verify_chain(),
         "devices": len(read_devices()),
     }
+
+
+@app.get("/api/forecast/benchmark")
+def forecast_benchmark():
+    """Session-grouped forecasting evaluation (training/evaluate_forecasting.py)."""
+    path = MODELS_DIR / "temporal" / "forecast_evaluation_v8.json"
+    if not path.exists():
+        return {"available": False, "hint": "Run: python -m training.evaluate_forecasting"}
+    try:
+        return {"available": True, **json.loads(path.read_text(encoding="utf-8"))}
+    except Exception as exc:
+        return {"available": False, "error": str(exc)}
 
 
 @app.get("/api/models/arena")

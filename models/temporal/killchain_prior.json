@@ -1,0 +1,64 @@
+{
+  "prior": {
+    "laplace": 0.5,
+    "order_bonus": 1.5,
+    "counts": {
+      "Normal": {
+        "Suspicious": 12.0,
+        "Reconnaissance": 4.0,
+        "Normal": 4.0
+      },
+      "Suspicious": {
+        "Reconnaissance": 20.0,
+        "Suspicious": 4.0,
+        "Initial Access": 4.0
+      },
+      "Reconnaissance": {
+        "Reconnaissance": 16.0,
+        "Initial Access": 16.0,
+        "Lateral Movement": 4.0,
+        "Impact": 4.0
+      },
+      "Initial Access": {
+        "Execution": 12.0,
+        "Persistence": 4.0,
+        "Command & Control": 4.0
+      },
+      "Execution": {
+        "Execution": 4.0,
+        "Persistence": 4.0,
+        "Impact": 4.0
+      },
+      "Persistence": {
+        "Command & Control": 4.0,
+        "Lateral Movement": 4.0
+      },
+      "Command & Control": {
+        "Command & Control": 4.0,
+        "Exfiltration": 4.0
+      },
+      "Lateral Movement": {
+        "Exfiltration": 4.0,
+        "Lateral Movement": 4.0
+      },
+      "Exfiltration": {
+        "Exfiltration": 8.0
+      },
+      "Impact": {
+        "Impact": 12.0
+      }
+    }
+  },
+  "gate": [
+    0.65,
+    0.2,
+    0.4
+  ],
+  "gate_fields": [
+    "alpha_confident",
+    "alpha_uncertain",
+    "tau"
+  ],
+  "trained_on_samples": 164,
+  "evaluation": "python -m training.evaluate_forecasting"
+}
