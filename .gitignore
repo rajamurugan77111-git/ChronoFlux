@@ -13,3 +13,11 @@ Thumbs.db
 .idea/
 data/raw/**/*.csv
 data/raw/**/*.pcap
+# secrets / runtime
+.env
+data/users.db
+data/secret_key
+data/*.log
+data/evidence/*.jsonl
+data/live/alerts.jsonl
+data/state/

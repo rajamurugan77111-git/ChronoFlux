@@ -1,0 +1,35 @@
+# Production:  cp .env.example .env  (set passwords/keys)  &&  docker compose up -d --build
+# With the live sensor on this host:  docker compose --profile sensor up -d --build
+services:
+  chronoflux:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      - CHRONOFLUX_NO_BROWSER=1
+    volumes:
+      - cf-data:/app/data/live
+      - cf-evidence:/app/data/evidence
+      - cf-users:/app/data/state
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  sensor:
+    profiles: ["sensor"]
+    build: .
+    command: ["python", "live/sensor.py", "--server", "http://127.0.0.1:8000"]
+    env_file: .env
+    network_mode: host          # sees the host's real network interfaces
+    cap_add: [NET_RAW, NET_ADMIN]
+    depends_on: [chronoflux]
+    restart: unless-stopped
+
+volumes:
+  cf-data:
+  cf-evidence:
+  cf-users:

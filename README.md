@@ -163,12 +163,67 @@ ChronoFlux/
 ├── frontend/               # web console (HTML/CSS/JS)
 ├── data/                   # training CSV, demo samples, CIC-IDS-2018 / CTU-13 samples
 ├── data_tools/             # dataset download + converters
-├── live/ubuntu_sensor.py   # Scapy gateway sensor (deferred in demo build)
+├── live/sensor.py          # live Scapy sensor (Linux / Windows+Npcap / macOS)
+├── frontend/login.html, auth.js  # sign-in page, session/CSRF, admin panels
 ├── tests/                  # pytest suite + runtime checks
 └── docs/                   # architecture, features, demo scripts
 ```
 
 ---
+
+## Live monitoring, security and alerts (production)
+
+ChronoFlux runs as a monitored service:
+
+```
+ gateway / host                         ChronoFlux server                       analysts
+┌────────────────────┐  X-API-Key   ┌──────────────────────────────┐  login  ┌──────────────┐
+│ live/sensor.py     │ ───────────► │ detect → forecast → evidence │ ◄────── │ admin/analyst│
+│ (Scapy, metadata)  │  every 10 s  │ alerts: email / Telegram     │ ──────► │ email/Telegram│
+└────────────────────┘              └──────────────────────────────┘         └──────────────┘
+```
+
+![Live sensor, users and alerts on the System page](docs/screenshots/system_live_sensor.png)
+
+**Live sensor** (`live/sensor.py`) captures packet and flow *metadata* only (never payloads)
+and sends one feature window every N seconds. It was verified on real captured traffic: a
+port scan against the monitored host (1,408 packets in a 5 s window) was classified
+**Reconnaissance, risk CRITICAL**.
+
+```bash
+sudo python live/sensor.py --server http://<server>:8000 --interface eth0 --api-key <CHRONOFLUX_SENSOR_KEY>
+python live/sensor.py --list-interfaces
+```
+
+On Windows, install [Npcap](https://npcap.com) and run the command from an Administrator
+terminal.
+
+**Login and roles.** Every page and API needs a signed-in user:
+
+| Role | Monitor, demos, offline CSV/PCAP, evidence | Retrain models, clear history/devices | Manage users, test alerts |
+|---|---|---|---|
+| analyst | ✓ | | |
+| admin | ✓ | ✓ | ✓ |
+
+- Passwords are hashed with scrypt.
+- Sessions use HMAC-signed HttpOnly cookies, with CSRF tokens on every change.
+- An account is locked for 5 minutes after 5 failed attempts.
+- Sensors authenticate with `CHRONOFLUX_SENSOR_KEY`.
+
+**Alerts.** Live HIGH/CRITICAL windows are sent by email (SMTP) and/or Telegram, with the
+stage, MITRE tactics, the forecast next stage and the infiltration probability. A per-source
+cool-down sends one alert per attack, and a new alert goes out if it escalates.
+
+### Production deployment
+
+```bash
+cp .env.example .env                 # set CHRONOFLUX_ADMIN_PASSWORD, CHRONOFLUX_SENSOR_KEY, alert settings
+docker compose up -d --build         # console on :8000 (uvicorn, health-checked)
+docker compose --profile sensor up -d --build   # + live sensor on this host's interfaces
+```
+
+Without Docker, run `python run.py`. For HTTPS, put nginx or Caddy in front and set
+`CHRONOFLUX_SECURE_COOKIES=1`.
 
 ## Quick start
 
@@ -186,7 +241,8 @@ pip install -r requirements.txt
 python run.py
 ```
 
-Open http://127.0.0.1:8000 (Chrome is recommended), then:
+Open http://127.0.0.1:8000 (Chrome is recommended) and sign in as **admin**. The password is
+`CHRONOFLUX_ADMIN_PASSWORD`, or the one printed on the console on first start. Then:
 
 1. Go to **Simulation** and press **Play**.
 2. Click **Run demo**.
@@ -226,8 +282,8 @@ pytest -v
   true chronological windows.
 - PCAPs are ingested with Scapy parsers in the offline PCAP path.
 
-> The bundled models are built from the cleaned 47,678-row training file for prototype use.
-> See `data/MODEL_DATA_NOTE.txt` for the full benchmark procedure.
+> The bundled models are trained on 47,678 cleaned UNSW-NB15 flows and selected by the model
+> arena. See `data/MODEL_DATA_NOTE.txt` to retrain on a larger benchmark.
 
 ---
 
@@ -239,6 +295,11 @@ pytest -v
 | GET | `/api/system` | Full system status and metrics |
 | GET | `/api/models/arena` | **AI Model Arena leaderboard, feature importance, data ceiling** |
 | GET | `/api/forecast/benchmark` | **Session-grouped forecasting benchmark** |
+| POST | `/api/sensor/live` | Live sensor ingestion (`X-API-Key`) |
+| GET | `/api/sensor/status` | Connected sensors, last window, last stage |
+| POST | `/api/auth/login` · `/api/auth/logout` · GET `/api/auth/me` | Sessions |
+| GET/POST/DELETE | `/api/users` | User management (admin) |
+| GET · POST | `/api/alerts` · `/api/alerts/test` | Alert status/history · test alert (admin) |
 | POST | `/api/predict` | Score one flow (detection + forecast) |
 | POST | `/api/demo/seed` | Seed a curated attack progression |
 | POST | `/api/offline/analyze-csv` / `-csv-stream` / `analyze-pcap` | Offline analysis |

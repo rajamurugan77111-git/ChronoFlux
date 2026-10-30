@@ -1,7 +1,8 @@
-"""ChronoFlux Ubuntu gateway sensor.
+"""ChronoFlux gateway sensor: packet capture + feature-window construction.
 
-Captures only packet/flow metadata required by the prototype. It does not
-inspect application payload contents.
+Captures only packet/flow metadata; it never inspects application payload contents.
+The recommended entry point is live/sensor.py (cross-platform, API key, retries);
+this module keeps the original Ubuntu CLI for compatibility.
 """
 import argparse
 import time

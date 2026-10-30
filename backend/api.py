@@ -5,8 +5,8 @@ from typing import Any, Dict
 import json
 
 import pandas as pd
-from fastapi import FastAPI, HTTPException, UploadFile, File, Query
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi import FastAPI, HTTPException, UploadFile, File, Query, Request
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from contextlib import asynccontextmanager
@@ -28,6 +28,12 @@ from core.pcap_ingest import parse_pcap_bytes
 from core.forecast_eval import evaluate_previous, summary as forecast_eval_summary, clear as clear_forecast_eval
 from core.devices import update as update_device, read as read_devices, clear as clear_devices
 from core.evidence_chain import append_event as append_evidence, read as read_evidence, verify_chain
+from core import security
+from core.alerts import AlertConfig, AlertManager
+import hmac
+import logging
+import os
+import time as _time
 
 ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = ROOT / "frontend"
@@ -52,10 +58,222 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(
     title="ChronoFlux",
-    version="7.1.0",
+    version="8.2.0",
     description="LSTM world-model network attack forecasting, hybrid detection and tamper-evident evidence intelligence",
     lifespan=lifespan,
 )
+
+
+# ======================================================================= security
+USERS = security.UserStore()
+_generated = USERS.ensure_admin()
+if _generated:
+    print(f"\n[ChronoFlux] First run: created user 'admin' with password  {_generated}\n"
+          f"            Sign in at /login and change it.\n")
+
+ALERTS_LOG = ROOT / "data" / "live" / "alerts.jsonl"
+
+
+def _record_alert(rec: dict) -> None:
+    ALERTS_LOG.parent.mkdir(parents=True, exist_ok=True)
+    with ALERTS_LOG.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(rec) + "\n")
+
+
+ALERTS = AlertManager(AlertConfig.from_env(os.environ), record=_record_alert)
+PUBLIC_PATHS = {"/login", "/api/health", "/health", "/api/auth/login", "/favicon.ico"}
+SENSOR_PATHS = {"/api/sensor/live", "/sensor/live"}
+
+
+def _session(request: Request) -> dict | None:
+    return security.read_token(request.cookies.get(security.COOKIE))
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    path = request.url.path
+    if not security.auth_enabled() or path in PUBLIC_PATHS or path.startswith("/assets/"):
+        return await call_next(request)
+    if path in SENSOR_PATHS:
+        key = security.sensor_key()
+        provided = request.headers.get("X-API-Key", "")
+        if key and not hmac.compare_digest(provided, key) and not _session(request):
+            return JSONResponse({"detail": "Sensor API key required (X-API-Key)"}, status_code=401)
+        return await call_next(request)
+    sess = _session(request)
+    if not sess or not USERS.get(sess["u"]):
+        if path == "/" or not path.startswith(("/api", "/health", "/latest", "/predict", "/sensor")):
+            return RedirectResponse("/login", status_code=302)
+        return JSONResponse({"detail": "Login required"}, status_code=401)
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        if not hmac.compare_digest(request.headers.get("X-CSRF-Token", ""), sess.get("csrf", "-")):
+            return JSONResponse({"detail": "Missing or invalid CSRF token"}, status_code=403)
+    admin_only = (request.method, path) in security.ADMIN_ONLY or path.startswith("/api/users") \
+        or path == "/api/alerts/test"
+    if admin_only and sess.get("r") != "admin":
+        return JSONResponse({"detail": "Requires the 'admin' role"}, status_code=403)
+    request.state.user = sess
+    return await call_next(request)
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class NewUserRequest(BaseModel):
+    username: str
+    password: str
+    role: str = "analyst"
+
+
+class PasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@app.get("/login")
+def login_page():
+    return FileResponse(FRONTEND / "login.html", headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/auth/login")
+def login(body: LoginRequest, request: Request):
+    name = body.username.strip().lower()
+    if USERS.locked(name):
+        return JSONResponse({"detail": "Too many failed attempts. Try again in 5 minutes."}, status_code=429)
+    user = USERS.authenticate(name, body.password)
+    if not user:
+        logging.getLogger("chronoflux.auth").warning(
+            "failed login for %r from %s", name, request.client.host if request.client else "?")
+        return JSONResponse({"detail": "Invalid username or password"}, status_code=401)
+    token, csrf = security.make_token(user)
+    resp = JSONResponse({"user": user["username"], "role": user["role"], "csrf": csrf})
+    resp.set_cookie(security.COOKIE, token, httponly=True, samesite="lax",
+                    secure=os.environ.get("CHRONOFLUX_SECURE_COOKIES", "0") == "1",
+                    max_age=security.SESSION_SECONDS)
+    return resp
+
+
+@app.post("/api/auth/logout")
+def logout():
+    resp = JSONResponse({"status": "logged out"})
+    resp.delete_cookie(security.COOKIE)
+    return resp
+
+
+@app.get("/api/auth/me")
+def me(request: Request):
+    if not security.auth_enabled():
+        return {"auth_enabled": False, "user": "local", "role": "admin", "csrf": ""}
+    s = request.state.user
+    return {"auth_enabled": True, "user": s["u"], "role": s["r"], "csrf": s["csrf"]}
+
+
+@app.post("/api/auth/password")
+def change_password(body: PasswordRequest, request: Request):
+    user = request.state.user["u"]
+    if not USERS.authenticate(user, body.current_password):
+        raise HTTPException(400, "Current password is incorrect")
+    try:
+        USERS.set_password(user, body.new_password)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    return {"status": "password changed"}
+
+
+@app.get("/api/users")
+def list_users():
+    return {"users": USERS.list()}
+
+
+@app.post("/api/users", status_code=201)
+def add_user(body: NewUserRequest):
+    try:
+        USERS.create(body.username, body.password, body.role)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    return {"status": "created"}
+
+
+@app.delete("/api/users/{username}")
+def delete_user(username: str, request: Request):
+    if security.auth_enabled() and request.state.user["u"] == username:
+        raise HTTPException(400, "You cannot delete your own account")
+    try:
+        USERS.delete(username)
+    except KeyError:
+        raise HTTPException(404, "User not found")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    return {"status": "deleted"}
+
+
+NON_LIVE_SENSORS = {"lab-generator", "demo-normal", "demo-lab", "pcap-upload"}
+
+
+@app.get("/api/sensor/status")
+def sensor_status():
+    """Is a live sensor streaming? Looks at the most recent non-demo windows."""
+    from datetime import datetime
+    rows = [r for r in read_history(limit=500) if r.get("sensor_id") not in NON_LIVE_SENSORS]
+    if not rows:
+        return {"connected": False, "sensors": [], "sensor_key_required": bool(security.sensor_key())}
+    by = {}
+    for r in rows:
+        by[r.get("sensor_id")] = r
+    out = []
+    for sid, r in by.items():
+        try:
+            age = _time.time() - datetime.fromisoformat(str(r.get("timestamp")).replace("Z", "+00:00")).timestamp()
+        except Exception:
+            age = None
+        tel = r.get("telemetry", {})
+        out.append({"sensor_id": sid, "session_id": r.get("session_id"), "last_seen": r.get("timestamp"),
+                    "age_seconds": round(age, 1) if age is not None else None,
+                    "online": age is not None and age < 120,
+                    "packets_last_window": tel.get("packet_count"),
+                    "last_stage": (r.get("prediction") or {}).get("current_stage")})
+    return {"connected": any(o["online"] for o in out), "sensors": out,
+            "sensor_key_required": bool(security.sensor_key())}
+
+
+@app.get("/api/alerts")
+def list_alerts():
+    recent = []
+    if ALERTS_LOG.exists():
+        recent = [json.loads(l) for l in ALERTS_LOG.read_text(encoding="utf-8").splitlines()[-50:] if l.strip()]
+    cfg = ALERTS.cfg
+    return {"enabled": ALERTS.enabled, "channels": ALERTS.channels(), "min_score": cfg.min_score,
+            "cooldown_seconds": cfg.cooldown_seconds, "recent": list(reversed(recent))}
+
+
+@app.post("/api/alerts/test")
+def test_alert():
+    if not ALERTS.enabled:
+        raise HTTPException(400, "No alert channel configured (see .env.example)")
+    return ALERTS.send_test()
+
+
+def _alert_from_prediction(prediction: dict, telemetry: dict, sensor_id: str, timestamp) -> None:
+    """Hand a live-sensor prediction to the alert manager (it applies threshold + cool-down)."""
+    try:
+        score = float(prediction.get("risk_score") or 0)
+        fc = prediction.get("forecast") or {}
+        ALERTS.handle({
+            "ip_address": telemetry.get("source_ip") or sensor_id,
+            "risk_score": round(score),
+            "severity": str(prediction.get("risk_level") or "UNKNOWN").upper(),
+            "stage": prediction.get("current_stage"),
+            "mitre": prediction.get("mitre_tactics", []),
+            "sensor_id": sensor_id,
+            "forecast_next": fc.get("next_stage"),
+            "infiltration": fc.get("infiltration_probability"),
+            "created_at": _time.time(),
+            "reasons": prediction.get("explanations", [])[:6],
+        })
+    except Exception as exc:  # alerting must never break ingestion
+        logging.getLogger("chronoflux.alerts").warning("alert hand-off failed: %s", exc)
 
 
 class PredictionRequest(BaseModel):
@@ -111,7 +329,7 @@ def health():
     world = world_status(read_history(limit=2500))
     return {
         "status": "ChronoFlux backend running",
-        "version": "8.1.0",
+        "version": "8.2.0",
         "mode": "live-ready",
         "models": {
             **current_models,
@@ -146,6 +364,9 @@ def health():
             "automl_model_arena_selection",
             "killchain_prior_hybrid_forecasting",
             "session_grouped_forecast_benchmark",
+            "role_based_login",
+            "email_telegram_alerts",
+            "live_scapy_sensor",
             "permutation_feature_importance",
         ],
     }
@@ -252,6 +473,7 @@ def sensor_live(request: LiveSensorRequest):
 
         update_device(request.telemetry, request.timestamp, prediction)
         append_history(record)
+        _alert_from_prediction(prediction, request.telemetry or {}, request.sensor_id, request.timestamp)
 
         evidence_block = None
         if (

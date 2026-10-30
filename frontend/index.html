@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/assets/styles.css?v=8.1.0" />
+  <link rel="stylesheet" href="/assets/styles.css?v=8.2.0" />
 </head>
 <body>
   <div class="app-shell">
@@ -47,6 +47,7 @@
           <button class="primary-button" id="seedDemoButton">▶ Attack demo</button>
           <button class="secondary-button" id="seedNormalButton">Normal demo</button>
           <div class="live-badge"><span class="pulse-dot"></span><span id="backendStatus">Connecting</span></div>
+          <div class="user-chip" id="userChip"></div>
           <span class="hidden" id="lastSync"></span>
           <button class="icon-button" id="themeToggle" title="Theme">◐</button>
         </div>
@@ -181,7 +182,7 @@
 
       <section class="page" id="page-live">
         <div class="section-intro">
-          <div><h2>Traffic</h2><p>Demo and analysed windows, charts, and connection details.</p></div>
+          <div><h2>Traffic</h2><p>Live sensor, demo and analysed windows, charts, and connection details.</p></div>
           <button class="secondary-button" id="clearHistoryButton">Clear history</button>
         </div>
         <div class="metric-grid">
@@ -409,13 +410,34 @@
           </div>
           <div id="forecastBench" class="arena-grid"><div class="muted tiny">Loading benchmark…</div></div>
         </article>
-        <article class="panel">
-          <div class="panel-head"><div class="panel-title">How to feed traffic (current build)</div></div>
+        <article class="panel arena-panel">
+          <div class="panel-head"><div class="panel-title">Live sensor</div><span class="chip" id="sensorChip">checking…</span></div>
+          <div id="sensorStatus" class="muted tiny" style="margin-bottom:10px">Checking sensor status…</div>
           <div class="subtle-note">
-            Live Ubuntu/Scapy gateway sensing is disabled in this demo build.
-            Use <strong>Run demo</strong> for a curated attack progression, or upload <strong>CSV / PCAP</strong> on the Offline page.
+            Start the Scapy sensor on the gateway or monitored host (needs root / Administrator + Npcap on Windows):<br>
+            <code>sudo python live/sensor.py --server http://&lt;this-server&gt;:8000 --interface eth0 --api-key &lt;CHRONOFLUX_SENSOR_KEY&gt;</code><br>
+            List interfaces with <code>python live/sensor.py --list-interfaces</code>. You can also use <strong>Attack demo</strong>, or upload a <strong>CSV / PCAP</strong> on the Offline page.
           </div>
         </article>
+        <div class="two-column admin-only-block">
+          <article class="panel">
+            <div class="panel-head"><div class="panel-title">Users</div><span class="chip">admin</span></div>
+            <div id="usersList" class="muted tiny">Loading…</div>
+            <div class="user-form">
+              <input id="nuName" placeholder="username" />
+              <input id="nuPass" type="password" placeholder="password (8+)" />
+              <select id="nuRole"><option value="analyst">analyst</option><option value="admin">admin</option></select>
+              <button class="secondary-button" id="nuAdd">Add user</button>
+            </div>
+            <div id="usersMsg" class="muted tiny"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><div class="panel-title">Alerts</div><span class="chip">email · Telegram</span></div>
+            <div id="alertsInfo" class="muted tiny">Loading…</div>
+            <button class="secondary-button" id="alertTest" style="margin-top:10px">Send test alert</button>
+            <div id="alertMsg" class="muted tiny" style="margin-top:6px"></div>
+          </article>
+        </div>
       </section>
 
       <section class="page page-simulation" id="page-simulation">
@@ -577,6 +599,7 @@
   </div>
 
   <div class="toast" id="toast"></div>
-  <script src="/assets/app.js?v=8.1.0"></script>
+  <script src="/assets/auth.js?v=8.2.0"></script>
+  <script src="/assets/app.js?v=8.2.0"></script>
 </body>
 </html>
