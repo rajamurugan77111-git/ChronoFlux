@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChronoFlux</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/styles.css?v=8.0.0" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-row">
+        <div class="brand-mark">CF</div>
+        <div class="brand-name">ChronoFlux</div>
+      </div>
+
+      <nav class="nav-list" aria-label="Primary">
+        <button type="button" class="nav-item active" data-page="overview">Overview</button>
+        <button type="button" class="nav-item" data-page="simulation">Simulation</button>
+        <button type="button" class="nav-item" data-page="live">Traffic</button>
+        <button type="button" class="nav-item" data-page="devices">Devices</button>
+        <button type="button" class="nav-item" data-page="offline">Offline</button>
+        <button type="button" class="nav-item" data-page="forecast">Forecast</button>
+        <button type="button" class="nav-item" data-page="alerts">Alerts</button>
+        <button type="button" class="nav-item" data-page="evidence">Evidence</button>
+        <button type="button" class="nav-item" data-page="system">System</button>
+      </nav>
+
+      <div class="sidebar-card">
+        <div class="side-status-row">
+          <span class="dot" id="sidebarSensorDot"></span>
+          <strong id="sidebarSensorText">Waiting</strong>
+        </div>
+        <div class="tiny muted" id="sidebarSensorMeta">No traffic yet — use Run demo</div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <button class="icon-button mobile-only" id="menuButton" aria-label="Menu">☰</button>
+        <div class="page-title" id="pageTitle">Overview</div>
+        <div class="page-subtitle hidden" id="pageSubtitle"></div>
+        <div class="topbar-actions">
+          <button class="primary-button" id="seedDemoButton">▶ Attack demo</button>
+          <button class="secondary-button" id="seedNormalButton">Normal demo</button>
+          <div class="live-badge"><span class="pulse-dot"></span><span id="backendStatus">Connecting</span></div>
+          <span class="hidden" id="lastSync"></span>
+          <button class="icon-button" id="themeToggle" title="Theme">◐</button>
+        </div>
+      </header>
+
+      <section class="page active" id="page-overview">
+        <div class="status-banner" id="statusBanner">
+          <div>
+            <div class="eyebrow">ChronoFlux · threat now</div>
+            <h1 id="currentState">Waiting</h1>
+            <p id="currentStateMeta">Click Run demo or upload CSV/PCAP in Offline</p>
+          </div>
+          <div class="status-banner-side">
+            <div class="health-ring" id="healthRing"><span id="healthScore">--</span></div>
+            <div>
+              <div class="health-label">Network health</div>
+              <div class="health-note" id="healthNote">No traffic yet</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="journey">
+          <button type="button" class="journey-link" data-goto="simulation"><em>01 Learn</em><strong>Open Simulation</strong><span>Walk the full project story first</span></button>
+          <button type="button" class="journey-link" data-goto="forecast"><em>02 Forecast</em><strong>Open Forecast</strong><span>T5 → T6 → T7 after Run demo</span></button>
+          <button type="button" class="journey-link" data-goto="evidence"><em>03 Verify</em><strong>Open Evidence</strong><span>SHA-256 chain after elevated risk</span></button>
+        </div>
+        <div class="flow-banner hidden" id="demoReadyBanner">
+          <div>
+            <strong id="demoReadyTitle">Demo loaded</strong>
+            <p id="demoReadyText">Stay on this page or open Forecast / Overview when you are ready.</p>
+          </div>
+          <div class="flow-banner-actions">
+            <button type="button" class="secondary-button" data-goto="overview">Overview</button>
+            <button type="button" class="primary-button" data-goto="forecast">Forecast</button>
+            <button type="button" class="secondary-button" id="dismissDemoBanner">Stay here</button>
+          </div>
+        </div>
+
+        <div class="metric-grid">
+          <article class="metric-card">
+            <div class="metric-top">Anomaly</div>
+            <div class="metric-value" id="anomalyScore">--%</div>
+            <div class="metric-foot" id="anomalyLabel">Baseline</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-top">Risk</div>
+            <div class="metric-value" id="riskLevel">--</div>
+            <div class="metric-foot">Score <strong id="riskScore">--</strong>/100</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-top">Confidence</div>
+            <div class="metric-value" id="confidenceValue">--%</div>
+            <div class="metric-foot" id="confidenceMeta">Stage confidence</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-top">Next stage</div>
+            <div class="metric-value compact-value" id="forecastNext">--</div>
+            <div class="metric-foot" id="forecastConfidence">World-model forecast</div>
+          </article>
+        </div>
+
+        <div class="two-column">
+          <article class="panel">
+            <div class="panel-head">
+              <div class="panel-title">Connection</div>
+              <span class="chip">L3 / L4</span>
+            </div>
+            <div class="intel-flow">
+              <div class="intel-node"><span>Source</span><strong id="overviewSource">--</strong><small id="overviewSourcePort">Port --</small></div>
+              <div class="intel-arrow">→</div>
+              <div class="intel-mid"><strong id="overviewProtocol">--</strong><small id="overviewFlags">Flags --</small></div>
+              <div class="intel-arrow">→</div>
+              <div class="intel-node"><span>Destination</span><strong id="overviewDestination">--</strong><small id="overviewDestinationPort">Port --</small></div>
+            </div>
+            <div class="intel-tags" id="overviewServices"><span>Waiting</span></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div class="panel-title">Forecast</div>
+              <span class="chip" id="forecastMode">WAITING</span>
+            </div>
+            <div class="progression" id="progression"></div>
+            <div class="subtle-note" id="forecastEvidence">Waiting for T1–T4 windows.</div>
+            <div class="panel-head" style="margin-top:16px;margin-bottom:8px">
+              <div class="panel-title">Evidence</div>
+              <span class="chip" id="overviewChainState">—</span>
+            </div>
+            <div class="evidence-kpis">
+              <div><span>Blocks</span><strong id="overviewBlockCount">0</strong></div>
+              <div><span>Latest</span><strong id="overviewLatestEvent">None</strong></div>
+            </div>
+            <div class="hash-line"><span>Latest hash</span><code id="overviewLatestHash">—</code></div>
+          </article>
+        </div>
+
+        <div class="two-column wide-left">
+          <article class="panel">
+            <div class="panel-head">
+              <div class="panel-title">Traffic</div>
+              <span class="chip" id="trafficChip">0 windows</span>
+            </div>
+            <canvas id="trafficChart" width="900" height="260"></canvas>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><div class="panel-title">T1 → T4</div></div>
+            <div class="timeline-grid" id="timelineGrid"></div>
+          </article>
+        </div>
+
+        <div class="two-column">
+          <article class="panel">
+            <div class="panel-head"><div class="panel-title">Detection engine</div></div>
+            <div class="engine-grid">
+              <div class="engine-row"><span class="engine-name">ML</span><strong id="mlStage">--</strong><span class="muted" id="mlConfidence">--</span></div>
+              <div class="engine-row"><span class="engine-name">Anomaly</span><strong id="engineAnomaly">--</strong><span class="muted" id="engineAnomalyLabel">--</span></div>
+              <div class="engine-row"><span class="engine-name">Signature</span><strong id="signatureStatus">None</strong><span class="muted" id="signatureCount">0</span></div>
+              <div class="engine-row"><span class="engine-name">Behaviour</span><strong id="behaviourStage">--</strong><span class="muted" id="attackCategory">--</span></div>
+              <div class="engine-row"><span class="engine-name">Risk mix</span><strong id="riskFormula">0.50 ML + 0.30 IF + 0.20 Rules</strong><span class="muted" id="riskComponents">0–100</span></div>
+              <div class="engine-row"><span class="engine-name">MITRE</span><strong id="mitreTactics">--</strong><span class="muted">mapped</span></div>
+            </div>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><div class="panel-title">Why & action</div></div>
+            <div class="why-action-grid">
+              <div><div class="mini-title">Why</div><ul class="clean-list" id="whyList"><li>Waiting for analysis.</li></ul></div>
+              <div><div class="mini-title">Action</div><ul class="clean-list" id="actionList"><li>Click Run demo or analyse a CSV/PCAP.</li></ul></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="page" id="page-live">
+        <div class="section-intro">
+          <div><h2>Traffic</h2><p>Demo and analysed windows, charts, and connection details.</p></div>
+          <button class="secondary-button" id="clearHistoryButton">Clear history</button>
+        </div>
+        <div class="metric-grid">
+          <article class="metric-card"><div class="metric-top">Packets</div><div class="metric-value" id="livePackets">0</div></article>
+          <article class="metric-card"><div class="metric-top">Rate</div><div class="metric-value" id="liveRate">0</div><div class="metric-foot">pkt/s</div></article>
+          <article class="metric-card"><div class="metric-top">Ports</div><div class="metric-value" id="livePorts">0</div></article>
+          <article class="metric-card"><div class="metric-top">SYN</div><div class="metric-value" id="liveSyn">0</div></article>
+        </div>
+        <div class="two-column wide-left">
+          <article class="panel"><div class="panel-head"><div class="panel-title">Activity</div></div><canvas id="liveChart" width="900" height="300"></canvas></article>
+          <article class="panel"><div class="panel-head"><div class="panel-title">Window metadata</div></div><div class="key-value-list" id="sensorMeta"></div></article>
+        </div>
+        <article class="panel">
+          <div class="panel-head"><div class="panel-title">Connection</div><span class="chip">L3 / L4</span></div>
+          <div class="connection-grid" id="connectionIntel">
+            <div class="connection-card"><span>Source</span><strong id="connSource">--</strong><small id="connSourcePort">Port --</small></div>
+            <div class="connection-card"><span>Destination</span><strong id="connDestination">--</strong><small id="connDestinationPort">Port --</small></div>
+            <div class="connection-card"><span>Protocol</span><strong id="connProtocol">--</strong><small id="connService">--</small></div>
+            <div class="connection-card"><span>Flags</span><strong id="connFlags">--</strong><small id="connPortSpread">0 ports</small></div>
+          </div>
+          <div class="intel-tags" id="connPortList"><span>No ports</span></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><div class="panel-title">Recent windows</div></div>
+          <div class="table-wrap"><table><thead><tr><th>Time</th><th>State</th><th>Risk</th><th>Anomaly</th><th>Packets</th><th>Next</th></tr></thead><tbody id="historyTable"></tbody></table></div>
+        </article>
+      </section>
+
+      <section class="page" id="page-devices">
+        <div class="section-intro">
+          <div><h2>Devices</h2><p>Observed source hosts.</p></div>
+          <button class="secondary-button" id="clearDevicesButton">Clear</button>
+        </div>
+        <div class="metric-grid">
+          <article class="metric-card"><div class="metric-top">Total</div><div class="metric-value" id="deviceTotal">0</div></article>
+          <article class="metric-card"><div class="metric-top">New</div><div class="metric-value" id="deviceNew">0</div></article>
+          <article class="metric-card"><div class="metric-top">Elevated</div><div class="metric-value" id="deviceElevated">0</div></article>
+          <article class="metric-card"><div class="metric-top">Latest</div><div class="metric-value compact-value" id="deviceLatest">None</div></article>
+        </div>
+        <article class="panel">
+          <div class="table-wrap"><table><thead><tr><th>Device</th><th>Status</th><th>First</th><th>Last</th><th>Stage</th><th>Risk</th><th>Ports</th><th>Destinations</th></tr></thead><tbody id="devicesTable"></tbody></table></div>
+          <div class="empty-state hidden" id="devicesEmpty">No devices yet.</div>
+        </article>
+      </section>
+
+      <section class="page" id="page-offline">
+        <div class="section-intro">
+          <div><h2>Offline analysis</h2><p>Upload CSV or PCAP.</p></div>
+        </div>
+        <div class="two-column">
+          <article class="panel upload-panel">
+            <div class="upload-zone" id="uploadZone">
+              <h3>Drop CSV or PCAP</h3>
+              <p>or choose a file</p>
+              <input type="file" id="csvFile" accept=".csv,.pcap,.pcapng,.cap" hidden />
+              <button class="primary-button" id="chooseFileButton">Choose file</button>
+              <div class="file-name" id="fileName">No file selected</div>
+            </div>
+            <div class="upload-actions">
+              <button class="primary-button" id="analyzeFileButton" disabled>Analyse all</button>
+              <button class="secondary-button" id="analyzeSampleButton" disabled>Balanced sample</button>
+              <button class="secondary-button hidden" id="offlineCancelButton">Stop</button>
+              <span class="muted tiny" id="offlineHint">Large CSV = batch scan with live updates · PCAP for forecast</span>
+            </div>
+            <div class="offline-progress hidden" id="offlineProgress">
+              <div class="offline-progress-top">
+                <strong id="offlineBatchLabel">Batch 0 / 0</strong>
+                <span id="offlineBatchPct">0%</span>
+              </div>
+              <div class="offline-progress-track"><b id="offlineBatchBar"></b></div>
+              <div class="muted tiny" id="offlineBatchMeta">Waiting…</div>
+            </div>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><div class="panel-title">Features used</div></div>
+            <div class="schema-cloud"><span>ports</span><span>bytes</span><span>IAT</span><span>TTL</span><span>window</span><span>flags</span><span>fragments</span><span>retransmits</span><span>payload</span><span>port-scan</span></div>
+            <div class="subtle-note">ChronoFlux, CIC-IDS-2018, and CTU-13 CSVs auto-map. PCAP builds dual flow/packet vectors.</div>
+          </article>
+        </div>
+        <div id="offlineResults" class="hidden">
+          <div class="metric-grid">
+            <article class="metric-card"><div class="metric-top">Total</div><div class="metric-value" id="offlineTotal">0</div></article>
+            <article class="metric-card"><div class="metric-top">Analysed</div><div class="metric-value" id="offlineAnalysed">0</div></article>
+            <article class="metric-card"><div class="metric-top">Anomaly</div><div class="metric-value" id="offlineAnomaly">0%</div></article>
+            <article class="metric-card"><div class="metric-top">Accuracy</div><div class="metric-value" id="offlineAccuracy">N/A</div><div class="metric-foot" id="offlineAccuracyFoot"></div></article>
+            <article class="metric-card"><div class="metric-top">Attack detect</div><div class="metric-value" id="offlineBinaryAcc">N/A</div><div class="metric-foot">Normal vs Attack</div></article>
+          </div>
+          <div class="two-column">
+            <article class="panel"><div class="panel-head"><div class="panel-title">Stages</div></div><div id="offlineStageBars" class="bar-list"></div></article>
+            <article class="panel"><div class="panel-head"><div class="panel-title">Risk</div></div><div id="offlineRiskBars" class="bar-list"></div></article>
+          </div>
+          <article class="panel" id="offlineForecastPanel">
+            <div class="panel-head"><div class="panel-title">PCAP forecast</div></div>
+            <p id="offlineForecastSummary" class="body-copy">Upload a PCAP for K-step rollout.</p>
+            <div class="key-value-list" id="offlineDrivingFeatures"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="page page-forecast" id="page-forecast">
+        <div class="forecast-intro">
+          <div class="forecast-intro-text">
+            <h2>Forecast</h2>
+            <p>T1–T4 history → LSTM → T5 / T6 / T7</p>
+          </div>
+          <button type="button" class="primary-button forecast-sample-btn" id="forecastSampleButton">▶ Attack sample</button>
+          <button type="button" class="secondary-button" id="forecastNormalButton">Normal sample</button>
+          <button type="button" class="secondary-button hidden" id="trainTemporalButton">Train model</button>
+        </div>
+
+        <article class="panel forecast-hero">
+          <p class="forecast-one-liner">
+            Uses the last four windows (<strong>T1–T4</strong>) and an <strong>LSTM</strong>
+            to forecast <strong>T5 → T6 → T7</strong> before compromise.
+          </p>
+          <div class="forecast-next-block">
+            <div class="eyebrow">Next stage (T5)</div>
+            <div class="big-forecast" id="forecastPageNext">—</div>
+            <div class="muted" id="forecastPageMeta">Click Load forecast sample</div>
+            <div class="muted" id="forecastInfiltrationMeta"></div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head forecast-panel-head">
+            <div class="panel-title">History T1 → T4</div>
+            <span class="chip" id="forecastModelName">—</span>
+          </div>
+          <div class="forecast-history-grid" id="forecastFlow"></div>
+          <div class="subtle-note" id="forecastModelMeta">Need four chronological windows</div>
+        </article>
+
+        <div class="forecast-horizon-grid">
+          <article class="forecast-horizon-card">
+            <em>T5 · +1</em>
+            <strong id="forecastT5">—</strong>
+            <span id="forecastT5Meta">next window</span>
+          </article>
+          <article class="forecast-horizon-card">
+            <em>T6 · +2</em>
+            <strong id="forecastT6">—</strong>
+            <span id="forecastT6Meta">two ahead</span>
+          </article>
+          <article class="forecast-horizon-card">
+            <em>T7 · +3</em>
+            <strong id="forecastT7">—</strong>
+            <span id="forecastT7Meta">three ahead</span>
+          </article>
+        </div>
+
+        <div class="forecast-why">
+          <article class="panel">
+            <div class="panel-head"><div class="panel-title">Why this forecast</div></div>
+            <p id="forecastPageEvidence" class="body-copy">Load the sample to see model evidence.</p>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><div class="panel-title">Top drivers</div></div>
+            <div class="key-value-list" id="forecastDrivingFeatures"></div>
+          </article>
+        </div>
+
+        <div class="hidden" aria-hidden="true">
+          <div id="forecastTimeline"></div>
+          <div id="forecastEngineStatus"></div>
+          <div id="forecastBaselineCompare"></div>
+          <div id="forecastConfusionWrap"></div>
+          <div id="forecastAccuracy"></div>
+          <div id="forecastMacroF1"></div>
+          <div id="forecastTransitionAccuracy"></div>
+          <div id="forecastLead"></div>
+          <div id="forecastPrecision"></div>
+          <div id="forecastRecall"></div>
+          <div id="forecastFpr"></div>
+          <div id="forecastVerified"></div>
+          <div id="forecastLast"></div>
+        </div>
+      </section>
+
+      <section class="page" id="page-alerts">
+        <div class="section-intro"><div><h2>Alerts</h2><p>Elevated events.</p></div></div>
+        <article class="panel">
+          <div class="table-wrap"><table><thead><tr><th>Time</th><th>State</th><th>Risk</th><th>Score</th><th>Signature</th><th>Forecast</th></tr></thead><tbody id="alertsTable"></tbody></table></div>
+          <div class="empty-state hidden" id="alertsEmpty">No elevated alerts.</div>
+        </article>
+      </section>
+
+      <section class="page" id="page-evidence">
+        <div class="section-intro">
+          <div><h2>Evidence</h2><p>SHA-256 hash chain of elevated events.</p></div>
+          <button class="secondary-button" id="verifyChainButton">Verify</button>
+        </div>
+        <div class="metric-grid">
+          <article class="metric-card"><div class="metric-top">Integrity</div><div class="metric-value" id="chainIntegrity">—</div><div class="metric-foot" id="chainIntegrityNote"></div></article>
+          <article class="metric-card"><div class="metric-top">Blocks</div><div class="metric-value" id="chainBlocks">0</div></article>
+          <article class="metric-card"><div class="metric-top">Latest</div><div class="metric-value compact-value" id="chainLatestEvent">None</div></article>
+          <article class="metric-card"><div class="metric-top">Hash</div><div class="metric-value">SHA-256</div></article>
+        </div>
+        <article class="panel">
+          <div class="evidence-flow">
+            <span>Detect</span><b>→</b><span>Event</span><b>→</b><span>Hash</span><b>→</b><span>Link</span><b>→</b><span>Verify</span>
+          </div>
+        </article>
+        <article class="panel">
+          <div class="table-wrap"><table><thead><tr><th>Event</th><th>Time</th><th>Threat</th><th>Risk</th><th>Source</th><th>Destination</th><th>Protocol</th><th>Hash</th></tr></thead><tbody id="evidenceTable"></tbody></table></div>
+          <div class="empty-state hidden" id="evidenceEmpty">No evidence blocks yet.</div>
+        </article>
+      </section>
+
+      <section class="page" id="page-system">
+        <div class="section-intro"><div><h2>System</h2><p>Models and console readiness.</p></div></div>
+        <div class="system-grid" id="systemGrid"></div>
+        <article class="panel arena-panel">
+          <div class="panel-head"><div class="panel-title">AI Model Arena — automated model selection</div></div>
+          <div class="subtle-note" style="margin-bottom:12px">
+            Candidate algorithms are trained on the same stratified split; the best model per task is deployed.
+            Re-run with <code>python -m training.model_arena</code>.
+          </div>
+          <div id="arenaBody" class="arena-grid"><div class="muted tiny">Loading leaderboard…</div></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><div class="panel-title">How to feed traffic (current build)</div></div>
+          <div class="subtle-note">
+            Live Ubuntu/Scapy gateway sensing is disabled in this demo build.
+            Use <strong>Run demo</strong> for a curated attack progression, or upload <strong>CSV / PCAP</strong> on the Offline page.
+          </div>
+        </article>
+      </section>
+
+      <section class="page page-simulation" id="page-simulation">
+        <div class="sim-toolbar" id="simToolbar">
+          <button type="button" class="secondary-button" id="simPrevButton">← Prev</button>
+          <button type="button" class="primary-button sim-next-lg" id="simNextButton">Next step →</button>
+          <button type="button" class="secondary-button" id="simPlayButton">▶ Auto-play</button>
+          <button type="button" class="secondary-button" id="simPauseButton">Pause</button>
+          <button type="button" class="secondary-button" id="simResetButton">Restart</button>
+          <button type="button" class="primary-button" id="simSeedButton">Run real demo</button>
+        </div>
+
+        <div class="section-intro sim-intro">
+          <div>
+            <h2>Simulation</h2>
+            <p>Learn ChronoFlux, then walk one attack step by step.</p>
+          </div>
+        </div>
+
+        <article class="panel sim-explain-card">
+          <div class="eyebrow">What is ChronoFlux?</div>
+          <h3>AI network attack forecasting</h3>
+          <p class="sim-explain-lead">
+            Classical IDS only asks “is this malicious <em>now</em>?” ChronoFlux also asks
+            “what attack stage comes <strong>next</strong>?” using an LSTM world model over chronological traffic windows.
+          </p>
+          <div class="sim-pillars">
+            <div><em>01 Detect</em><strong>Hybrid engine</strong><span>ML + Isolation Forest + signatures → current stage &amp; risk</span></div>
+            <div><em>02 Forecast</em><strong>World model</strong><span>T1–T4 history → predict T5 / T6 / T7 before compromise</span></div>
+            <div><em>03 Observe</em><strong>Console</strong><span>Traffic, devices, alerts — metadata only (no payload)</span></div>
+            <div><em>04 Verify</em><strong>Evidence</strong><span>Elevated events → SHA-256 tamper-evident chain</span></div>
+          </div>
+          <ol class="sim-howto">
+            <li><strong>Next step</strong> — walk the 8-step story below</li>
+            <li><strong>Run real demo</strong> — loads the actual model (stays here)</li>
+            <li><strong>Then open</strong> Overview → Forecast → Evidence</li>
+          </ol>
+        </article>
+
+        <div class="flow-banner hidden" id="simDemoBanner">
+          <div>
+            <strong>Real demo is loaded</strong>
+            <p>Model forecasts are in memory. Stay here, or open Overview / Forecast when ready.</p>
+          </div>
+          <div class="flow-banner-actions">
+            <button type="button" class="secondary-button" data-goto="overview">Overview</button>
+            <button type="button" class="primary-button" data-goto="forecast">Forecast</button>
+            <button type="button" class="secondary-button" id="dismissSimBanner">Stay here</button>
+          </div>
+        </div>
+
+        <article class="panel sim-example-card">
+          <div class="sim-example-top">
+            <div>
+              <div class="eyebrow">Worked example</div>
+              <h3 id="simScenarioTitle">Host 10.0.2.15 scans the lab gateway</h3>
+              <p id="simScenarioStory">
+                Source <strong>10.0.2.15</strong> → destination <strong>10.0.2.1</strong>.
+                Detect Reconnaissance → Initial Access, then forecast Execution → C2 → Exfiltration.
+              </p>
+            </div>
+            <div class="sim-example-flow" id="simExampleFlow">
+              <div><span>Source</span><strong id="simSrc">10.0.2.15</strong><small id="simSrcPort">:49152</small></div>
+              <b>→</b>
+              <div><span>Proto</span><strong id="simProto">TCP</strong><small id="simFlags">SYN flood</small></div>
+              <b>→</b>
+              <div><span>Destination</span><strong id="simDst">10.0.2.1</strong><small id="simDstPort">:22 / many</small></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel sim-hero">
+          <div class="sim-progress-wrap">
+            <div class="sim-progress-bar" id="simProgressBar"></div>
+          </div>
+          <div class="sim-step-label"><span id="simStepIndex">Step 0 / 8</span><strong id="simStepTitle">Ready — press Next step</strong></div>
+          <p class="sim-narration" id="simNarration">Use <strong>Next step</strong> to move one stage at a time. Pipeline nodes are also clickable.</p>
+        </article>
+
+        <article class="panel sim-pipeline-panel">
+          <div class="panel-head"><div class="panel-title">Pipeline — click a step</div><span class="chip" id="simPhaseChip">IDLE</span></div>
+          <div class="sim-pipeline" id="simPipeline">
+            <button type="button" class="sim-node" data-sim="0"><span>01</span><strong>Capture</strong><small>Traffic in</small></button>
+            <div class="sim-wire"><i></i></div>
+            <button type="button" class="sim-node" data-sim="1"><span>02</span><strong>Features</strong><small>Flow + packet</small></button>
+            <div class="sim-wire"><i></i></div>
+            <button type="button" class="sim-node" data-sim="2"><span>03</span><strong>Detect</strong><small>Hybrid risk</small></button>
+            <div class="sim-wire"><i></i></div>
+            <button type="button" class="sim-node" data-sim="3"><span>04</span><strong>T1–T4</strong><small>History</small></button>
+            <div class="sim-wire"><i></i></div>
+            <button type="button" class="sim-node" data-sim="4"><span>05</span><strong>World model</strong><small>LSTM</small></button>
+            <div class="sim-wire"><i></i></div>
+            <button type="button" class="sim-node" data-sim="5"><span>06</span><strong>T5–T7</strong><small>Forecast</small></button>
+            <div class="sim-wire"><i></i></div>
+            <button type="button" class="sim-node" data-sim="6"><span>07</span><strong>Explain</strong><small>Drivers</small></button>
+            <div class="sim-wire"><i></i></div>
+            <button type="button" class="sim-node" data-sim="7"><span>08</span><strong>Evidence</strong><small>SHA-256</small></button>
+          </div>
+          <div class="sim-packets" aria-hidden="true">
+            <span class="sim-packet"></span><span class="sim-packet"></span><span class="sim-packet"></span>
+          </div>
+        </article>
+
+        <div class="sim-detail-stack">
+          <article class="panel">
+            <div class="panel-head"><div class="panel-title">What this step means</div></div>
+            <ul class="sim-bullets" id="simBullets">
+              <li>Press <strong>Next step</strong> to start. Each click stays on Simulation.</li>
+            </ul>
+            <div class="subtle-note" id="simHint">After step 8, click <strong>Run real demo</strong>. You choose when to open Overview / Forecast.</div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head"><div class="panel-title">Example windows (T1–T4)</div><span class="chip" id="simAttackChip">NORMAL</span></div>
+            <div class="sim-window-grid" id="simWindowGrid">
+              <div class="sim-win" data-w="1"><em>T1</em><strong>—</strong><small>waiting</small></div>
+              <div class="sim-win" data-w="2"><em>T2</em><strong>—</strong><small>waiting</small></div>
+              <div class="sim-win" data-w="3"><em>T3</em><strong>—</strong><small>waiting</small></div>
+              <div class="sim-win" data-w="4"><em>T4</em><strong>—</strong><small>waiting</small></div>
+            </div>
+            <div class="sim-forecast-row" id="simForecastRow">
+              <div class="sim-fc"><em>T5</em><strong id="simT5">—</strong></div>
+              <div class="sim-fc"><em>T6</em><strong id="simT6">—</strong></div>
+              <div class="sim-fc"><em>T7</em><strong id="simT7">—</strong></div>
+            </div>
+            <div class="sim-attack-track" id="simAttackTrack">
+              <div class="sim-attack-step" data-stage="Normal">Normal</div>
+              <div class="sim-attack-step" data-stage="Reconnaissance">Recon</div>
+              <div class="sim-attack-step" data-stage="Initial Access">Access</div>
+              <div class="sim-attack-step" data-stage="Execution">Execute</div>
+              <div class="sim-attack-step" data-stage="Command & Control">C2</div>
+              <div class="sim-attack-step" data-stage="Exfiltration">Exfil</div>
+            </div>
+            <div class="sim-meters">
+              <div><span>Anomaly</span><div class="sim-meter"><b id="simAnomalyMeter"></b></div><strong id="simAnomalyText">0%</strong></div>
+              <div><span>Risk</span><div class="sim-meter risk"><b id="simRiskMeter"></b></div><strong id="simRiskText">0</strong></div>
+              <div><span>Infiltration</span><div class="sim-meter infil"><b id="simInfilMeter"></b></div><strong id="simInfilText">0%</strong></div>
+            </div>
+          </article>
+        </div>
+
+        <article class="panel">
+          <div class="panel-head"><div class="panel-title">Project coverage (NTRO / SIH)</div><span class="chip" id="simCoverageChip">0 / 10</span></div>
+          <div class="sim-checklist" id="simChecklist">
+            <label><input type="checkbox" disabled data-check="0" /> Demo seed + offline (CSV / PCAP) ingest</label>
+            <label><input type="checkbox" disabled data-check="1" /> Dual flow-level + packet-level features</label>
+            <label><input type="checkbox" disabled data-check="2" /> Hybrid ML + Isolation Forest + signatures</label>
+            <label><input type="checkbox" disabled data-check="3" /> Chronological T1–T4 state windows</label>
+            <label><input type="checkbox" disabled data-check="4" /> LSTM world model P(Sₜ₊₁ | history)</label>
+            <label><input type="checkbox" disabled data-check="5" /> K-step T5 / T6 / T7 forecasting</label>
+            <label><input type="checkbox" disabled data-check="6" /> Attention / SHAP-style drivers + MITRE</label>
+            <label><input type="checkbox" disabled data-check="7" /> Logistic regression baseline comparison</label>
+            <label><input type="checkbox" disabled data-check="8" /> SHA-256 tamper-evident evidence chain</label>
+            <label><input type="checkbox" disabled data-check="9" /> CIC-IDS-2018 / CTU-13 adapters</label>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="/assets/app.js?v=8.0.0"></script>
+</body>
+</html>

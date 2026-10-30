@@ -1,0 +1,9 @@
+{
+  "normal_rows": 20520,
+  "normal_q01": -0.04628769813801003,
+  "normal_q05": 0.03226436006207123,
+  "normal_q50": 0.18231135375645682,
+  "normal_q95": 0.21509133114249612,
+  "normal_q99": 0.22307455970711865,
+  "note": "Isolation Forest trained only on Normal traffic for baseline anomaly scoring."
+}

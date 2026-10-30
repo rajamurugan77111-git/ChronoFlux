@@ -1,0 +1,254 @@
+{
+  "generated_at": "2026-10-30T06:33:30.524293+00:00",
+  "dataset": "training.csv",
+  "split": "stratified 80/20 holdout, seed 42",
+  "tasks": {
+    "detection": {
+      "task": "detection",
+      "ranking_metric": "f1",
+      "winner": "hist_gradient_boost",
+      "winner_model": "Histogram Gradient Boosting (native categoricals, balanced)",
+      "improvement_vs_reference": 0.0024,
+      "leaderboard": [
+        {
+          "key": "hist_gradient_boost",
+          "model": "Histogram Gradient Boosting (native categoricals, balanced)",
+          "accuracy": 0.9875209731543624,
+          "precision": 0.9889563776918829,
+          "recall": 0.989138438880707,
+          "f1": 0.9890473999079613,
+          "confusion_matrix": [
+            [
+              4044,
+              60
+            ],
+            [
+              59,
+              5373
+            ]
+          ],
+          "train_seconds": 1.1,
+          "size_mb": 0.23
+        },
+        {
+          "key": "random_forest",
+          "model": "Random Forest (ChronoFlux v7 reference)",
+          "accuracy": 0.9846895973154363,
+          "precision": 0.9815962099125365,
+          "recall": 0.9917157584683358,
+          "f1": 0.9866300366300367,
+          "confusion_matrix": [
+            [
+              4003,
+              101
+            ],
+            [
+              45,
+              5387
+            ]
+          ],
+          "train_seconds": 8.8,
+          "size_mb": 5.6
+        },
+        {
+          "key": "logistic_regression",
+          "model": "Logistic Regression (linear baseline)",
+          "accuracy": 0.9468330536912751,
+          "precision": 0.934073682355015,
+          "recall": 0.9755154639175257,
+          "f1": 0.9543448896893292,
+          "confusion_matrix": [
+            [
+              3730,
+              374
+            ],
+            [
+              133,
+              5299
+            ]
+          ],
+          "train_seconds": 0.7,
+          "size_mb": 0.01
+        }
+      ],
+      "feature_importance": [
+        {
+          "feature": "sttl",
+          "importance": 0.3831
+        },
+        {
+          "feature": "ct_dst_src_ltm",
+          "importance": 0.0243
+        },
+        {
+          "feature": "service",
+          "importance": 0.0159
+        },
+        {
+          "feature": "ct_dst_ltm",
+          "importance": 0.0111
+        },
+        {
+          "feature": "proto",
+          "importance": 0.0107
+        },
+        {
+          "feature": "dbytes",
+          "importance": 0.0091
+        },
+        {
+          "feature": "sbytes",
+          "importance": 0.0088
+        },
+        {
+          "feature": "smean",
+          "importance": 0.0074
+        },
+        {
+          "feature": "dmean",
+          "importance": 0.0062
+        },
+        {
+          "feature": "dload",
+          "importance": 0.0057
+        },
+        {
+          "feature": "ct_srv_src",
+          "importance": 0.0042
+        },
+        {
+          "feature": "dloss",
+          "importance": 0.004
+        }
+      ],
+      "train_rows": 38142,
+      "validation_rows": 9536,
+      "deployed": true
+    },
+    "stage": {
+      "task": "stage",
+      "ranking_metric": "macro_f1",
+      "winner": "hist_gradient_boost",
+      "winner_model": "Histogram Gradient Boosting (native categoricals, balanced)",
+      "improvement_vs_reference": 0.0534,
+      "leaderboard": [
+        {
+          "key": "hist_gradient_boost",
+          "model": "Histogram Gradient Boosting (native categoricals, balanced)",
+          "accuracy": 0.8861157718120806,
+          "macro_f1": 0.5814913688060663,
+          "weighted_f1": 0.8936515961723029,
+          "per_class_f1": {
+            "Analysis": 0.0,
+            "Backdoor": 0.0377,
+            "DoS": 0.558,
+            "Exploits": 0.7283,
+            "Fuzzers": 0.7926,
+            "Generic": 0.9922,
+            "Normal": 0.98,
+            "Reconnaissance": 0.8441,
+            "Shellcode": 0.5962,
+            "Worms": 0.2857
+          },
+          "train_seconds": 3.6,
+          "size_mb": 0.91
+        },
+        {
+          "key": "random_forest",
+          "model": "Random Forest (ChronoFlux v7 reference)",
+          "accuracy": 0.8696518456375839,
+          "macro_f1": 0.5280631122616853,
+          "weighted_f1": 0.8850715121716781,
+          "per_class_f1": {
+            "Analysis": 0.0,
+            "Backdoor": 0.04,
+            "DoS": 0.4558,
+            "Exploits": 0.7255,
+            "Fuzzers": 0.8013,
+            "Generic": 0.9928,
+            "Normal": 0.9796,
+            "Reconnaissance": 0.8221,
+            "Shellcode": 0.4634,
+            "Worms": 0.0
+          },
+          "train_seconds": 20.4,
+          "size_mb": 26.77
+        },
+        {
+          "key": "logistic_regression",
+          "model": "Logistic Regression (linear baseline)",
+          "accuracy": 0.7765310402684564,
+          "macro_f1": 0.43066608936748574,
+          "weighted_f1": 0.8157937192064978,
+          "per_class_f1": {
+            "Analysis": 0.0155,
+            "Backdoor": 0.0451,
+            "DoS": 0.4061,
+            "Exploits": 0.6009,
+            "Fuzzers": 0.5801,
+            "Generic": 0.9904,
+            "Normal": 0.9325,
+            "Reconnaissance": 0.5366,
+            "Shellcode": 0.172,
+            "Worms": 0.0275
+          },
+          "train_seconds": 8.3,
+          "size_mb": 0.02
+        }
+      ],
+      "feature_importance": [
+        {
+          "feature": "sttl",
+          "importance": 0.217
+        },
+        {
+          "feature": "service",
+          "importance": 0.1269
+        },
+        {
+          "feature": "smean",
+          "importance": 0.0992
+        },
+        {
+          "feature": "proto",
+          "importance": 0.0624
+        },
+        {
+          "feature": "sbytes",
+          "importance": 0.0433
+        },
+        {
+          "feature": "ct_dst_src_ltm",
+          "importance": 0.0364
+        },
+        {
+          "feature": "ct_srv_dst",
+          "importance": 0.0283
+        },
+        {
+          "feature": "ct_srv_src",
+          "importance": 0.0274
+        },
+        {
+          "feature": "dmean",
+          "importance": 0.0225
+        },
+        {
+          "feature": "dbytes",
+          "importance": 0.0167
+        },
+        {
+          "feature": "synack",
+          "importance": 0.0161
+        },
+        {
+          "feature": "sinpkt",
+          "importance": 0.0148
+        }
+      ],
+      "train_rows": 38142,
+      "validation_rows": 9536,
+      "deployed": true
+    }
+  }
+}

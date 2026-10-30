@@ -1,0 +1,113 @@
+CHRONOFLUX - REAL UNSW-NB15 DATASET SETUP
+==========================================
+
+Purpose
+-------
+Replace the earlier small/all-normal testing subset with the published
+UNSW-NB15 training/testing splits.
+
+Official UNSW-NB15 split:
+- Training: 175,341 records
+- Testing : 82,332 records
+- Contains Normal + 9 attack categories.
+
+IMPORTANT
+---------
+This package does NOT generate fake rows.
+It does NOT add pseudo timestamps.
+It does NOT invent attack progression labels.
+It converts published UNSW-NB15 records into the exact 36-column schema
+used by the current ChronoFlux current-stage model.
+
+How to use in your current Windows project
+------------------------------------------
+1. Copy `prepare_real_unsw_dataset.py` into:
+
+   D:\ChronoFlux_Final_Simple\ChronoFlux_Final_Simple
+
+2. Open PowerShell there.
+
+3. Activate the venv:
+
+   .\venv\Scripts\Activate.ps1
+
+4. Run:
+
+   python prepare_real_unsw_dataset.py
+
+   If `python` is not available outside the activated venv, run:
+
+   .\venv\Scripts\python.exe prepare_real_unsw_dataset.py
+
+5. The script creates:
+
+   data\raw\Dataset_ChronoFlux_Clean.csv
+   data\raw\Testing_Dataset_ChronoFlux_Clean.csv
+   data\training.csv
+   data\testing.csv
+
+6. Retrain:
+
+   py -m training.train_detection
+   py -m training.train_stage
+
+   Or, to guarantee the venv interpreter:
+
+   .\venv\Scripts\python.exe -m training.train_detection
+   .\venv\Scripts\python.exe -m training.train_stage
+
+Expected class coverage
+-----------------------
+Training:
+Normal 56,000
+Analysis 2,000
+Backdoors 1,746
+DoS 12,264
+Exploits 33,393
+Fuzzers 18,184
+Generic 40,000
+Reconnaissance 10,491
+Shellcode 1,133
+Worms 130
+Total 175,341
+
+Testing:
+Normal 37,000
+Analysis 677
+Backdoors 583
+DoS 4,089
+Exploits 11,132
+Fuzzers 6,062
+Generic 18,871
+Reconnaissance 3,496
+Shellcode 378
+Worms 44
+Total 82,332
+
+Forecasting warning
+-------------------
+These pre-split CSVs are appropriate for:
+- Normal vs Attack detection
+- Current attack-category classification
+
+They are NOT enough by themselves for genuine T1->T4->T5 temporal
+forecasting because they do not provide the chronological attack
+progression needed by the forecasting model.
+
+For temporal forecasting, use:
+- timestamped live traffic captured by the Ubuntu sensor, or
+- a timestamped PCAP/flow dataset such as CICIDS2017/CSE-CIC-IDS2018.
+
+Recommended weekend plan
+------------------------
+Saturday:
+- Replace the old datasets with the real UNSW split.
+- Retrain detection and stage models.
+- Verify both Normal and Attack evaluation.
+- Test live Ubuntu -> backend -> dashboard.
+
+Sunday:
+- Record controlled lab traffic windows from Kali -> Ubuntu.
+- Store timestamped T1/T2/T3/T4 windows.
+- Add anomaly score and temporal forecast logic.
+- Finalize UI and rehearse the Monday demo.

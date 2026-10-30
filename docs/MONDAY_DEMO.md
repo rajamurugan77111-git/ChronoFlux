@@ -1,0 +1,23 @@
+# ChronoFlux SIH Demo Checklist — v7
+
+- [ ] Windows application starts with `START_CHRONOFLUX.bat`
+- [ ] `/health` reports version 7.0.0
+- [ ] Ubuntu sensor posts HTTP 200 and shows a recording session ID
+- [ ] Live Traffic shows source/destination IP, ports, protocol, flags and MAC when available
+- [ ] Devices page shows observed source devices
+- [ ] T1–T4 history fills from real chronological windows
+- [ ] Hybrid detection shows ML + Isolation Forest + signatures
+- [ ] Hybrid risk formula is visible: 0.50 ML + 0.30 anomaly + 0.20 signature
+- [ ] Attack category and behaviour stage are shown separately
+- [ ] MITRE-style interpretation is labelled inferred/analyst interpretation
+- [ ] At least 3 independent recording sessions collected; preferably 5+
+- [ ] Forecast page reports actual sequence counts and session splits
+- [ ] Sequence-based Random Forest model trained only from real chronological sessions
+- [ ] T5/T6/T7 predictions are shown only when confidence is sufficient
+- [ ] “INSUFFICIENT EVIDENCE” is shown instead of a forced guess when not reliable
+- [ ] Forecast confusion matrix / macro F1 / precision / recall / FPR visible after verification
+- [ ] At least one genuine transition forecast demonstrated if possible
+- [ ] Lead time measured from forecast issue to later observed transition
+- [ ] Evidence Chain verifies SHA-256 integrity successfully
+- [ ] Offline `sample_mixed_traffic.csv` works
+- [ ] Team can explain why UNSW is benchmark detection data, not temporal stage ground truth

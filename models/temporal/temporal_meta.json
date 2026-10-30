@@ -1,0 +1,64 @@
+{
+  "model_name": "Sequence-based Random Forest",
+  "model_qualification": "Ordered T1\u2013T4 feature representation + separate Random Forest horizon classifiers.",
+  "trained_at": "2026-09-06T18:14:35.778905+00:00",
+  "training_windows": 18,
+  "recording_sessions": 1,
+  "train_session_ids": [
+    "lab-session-001"
+  ],
+  "validation_session_ids": [],
+  "test_session_ids": [],
+  "split_policy": "Entire recording sessions are split chronologically into train/validation/test to prevent overlapping-window leakage across partitions.",
+  "metrics": {
+    "1": {
+      "trained": false,
+      "samples": 14,
+      "classes": [
+        "Initial Access",
+        "Normal",
+        "Reconnaissance",
+        "Suspicious"
+      ],
+      "reason": "Need at least 3 separate chronological recording sessions. Need at least 30 chronological sequence samples. Independent validation and test sessions are required.",
+      "split_samples": {
+        "train": 14,
+        "validation": 0,
+        "test": 0
+      }
+    },
+    "2": {
+      "trained": false,
+      "samples": 13,
+      "classes": [
+        "Initial Access",
+        "Normal",
+        "Reconnaissance",
+        "Suspicious"
+      ],
+      "reason": "Need at least 3 separate chronological recording sessions. Need at least 30 chronological sequence samples. Independent validation and test sessions are required.",
+      "split_samples": {
+        "train": 13,
+        "validation": 0,
+        "test": 0
+      }
+    },
+    "3": {
+      "trained": false,
+      "samples": 12,
+      "classes": [
+        "Initial Access",
+        "Normal",
+        "Reconnaissance",
+        "Suspicious"
+      ],
+      "reason": "Need at least 3 separate chronological recording sessions. Need at least 30 chronological sequence samples. Independent validation and test sessions are required.",
+      "split_samples": {
+        "train": 12,
+        "validation": 0,
+        "test": 0
+      }
+    }
+  },
+  "note": "Targets are future ChronoFlux behaviour states observed in genuine chronological live/lab sessions; they are not UNSW stage ground truth."
+}

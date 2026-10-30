@@ -1,0 +1,20 @@
+{
+  "accuracy": 0.9875209731543624,
+  "precision": 0.9889563776918829,
+  "recall": 0.989138438880707,
+  "f1": 0.9890473999079613,
+  "confusion_matrix": [
+    [
+      4044,
+      60
+    ],
+    [
+      59,
+      5373
+    ]
+  ],
+  "model_type": "Histogram Gradient Boosting (native categoricals, balanced)",
+  "train_rows": 38142,
+  "evaluation_rows": 9536,
+  "evaluation_note": "stratified holdout (model arena)"
+}

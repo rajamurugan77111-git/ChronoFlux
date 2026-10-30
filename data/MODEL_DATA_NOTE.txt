@@ -1,0 +1,17 @@
+ChronoFlux packaged model note
+==============================
+
+The pre-trained model files in this ZIP were built from the earlier cleaned
+ChronoFlux training file (47,678 labelled rows after cleaning) so that the
+website can run immediately after extraction.
+
+They are included for prototype/integration testing only. They are NOT the
+final 50,000+ / 50,000+ benchmark split requested for the hackathon report.
+
+For final benchmark training:
+1. Put a verified real training CSV at data/training.csv.
+2. Optionally put a verified real testing CSV containing BOTH Normal and Attack
+   classes at data/testing.csv.
+3. Run: .\venv\Scripts\python.exe -m training.train_all
+
+Do not use an all-Normal testing file to claim attack-detection performance.

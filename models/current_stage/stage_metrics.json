@@ -1,0 +1,32 @@
+{
+  "accuracy": 0.8861157718120806,
+  "macro_f1": 0.5814913688060663,
+  "weighted_f1": 0.8936515961723029,
+  "model_type": "Histogram Gradient Boosting (native categoricals, balanced)",
+  "train_rows": 38142,
+  "validation_rows": 9536,
+  "classes": [
+    "Analysis",
+    "Backdoor",
+    "DoS",
+    "Exploits",
+    "Fuzzers",
+    "Generic",
+    "Normal",
+    "Reconnaissance",
+    "Shellcode",
+    "Worms"
+  ],
+  "per_class_f1": {
+    "Analysis": 0.0,
+    "Backdoor": 0.0377,
+    "DoS": 0.558,
+    "Exploits": 0.7283,
+    "Fuzzers": 0.7926,
+    "Generic": 0.9922,
+    "Normal": 0.98,
+    "Reconnaissance": 0.8441,
+    "Shellcode": 0.5962,
+    "Worms": 0.2857
+  }
+}
