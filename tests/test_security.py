@@ -79,6 +79,14 @@ def test_live_alert_dispatch(monkeypatch):
     monkeypatch.setattr(ALERTS.cfg, "telegram_token", "1:x")
     monkeypatch.setattr(ALERTS.cfg, "telegram_chat_id", "9")
     monkeypatch.setattr(ALERTS, "_send", lambda ev: sent.append(ev) or {})
+
+    class Immediate:  # run alert jobs synchronously: no thread timing in the test
+        def submit(self, fn, *a):
+            from concurrent.futures import Future
+            f = Future()
+            f.set_result(fn(*a))
+            return f
+    monkeypatch.setattr(ALERTS, "_pool", Immediate())
     ALERTS._last.clear()
     c = TestClient(app)
     hot = {"sensor_id": "gw", "features": {"proto": "tcp", "spkts": 900, "sbytes": 900000,
@@ -88,8 +96,6 @@ def test_live_alert_dispatch(monkeypatch):
     for _ in range(3):
         r = c.post("/api/sensor/live", json=hot)
         assert r.status_code == 200
-    ALERTS._pool.shutdown(wait=True)
-    ALERTS._pool = __import__("concurrent.futures").futures.ThreadPoolExecutor(max_workers=2)
     pred = r.json()["prediction"]
     if float(pred.get("risk_score") or 0) >= ALERTS.cfg.min_score:
         assert len(sent) == 1 and sent[0]["ip_address"] == "198.51.100.77"   # cool-down: one alert
